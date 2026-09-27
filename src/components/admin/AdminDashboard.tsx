@@ -11,7 +11,8 @@ import {
   ResourceCategory, 
   EventCategory,
   AuditLog,
-  FeedbackSubmission
+  FeedbackSubmission,
+  Certificate
 } from '../../types';
 import { 
   ShieldCheck, 
@@ -61,6 +62,9 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { AIAgent } from '../../types';
+import { fileToOptimizedDataUrl } from '../../utils/images';
+import { CertificateArtwork } from '../common/CertificateArtwork';
+import { downloadCertificatePdf } from '../../utils/certificatePdf';
 
 export const STANDARD_EXECUTIVE_POSITIONS = [
   'President',
@@ -138,6 +142,8 @@ export const AdminDashboard: React.FC = () => {
     updateFeedbackStatus, 
     auditLogs, 
     issueCertificate,
+    updateCertificate,
+    certificates,
     setActivePage,
     isAdminAuthenticated,
     adminPassword,
@@ -279,8 +285,19 @@ export const AdminDashboard: React.FC = () => {
 
   // Issue Certificate State
   const [certStudentName, setCertStudentName] = useState('');
+  const [certStudentId, setCertStudentId] = useState('');
   const [certProgTitle, setCertProgTitle] = useState('Biochemistry Clinical Diagnostics Workshop');
   const [certCategory, setCertCategory] = useState('Workshop');
+  const [certTitle, setCertTitle] = useState('Certificate of Achievement');
+  const [certStatement, setCertStatement] = useState('This certificate is proudly presented to');
+  const [certIssuerName, setCertIssuerName] = useState(siteSettings.presidentName || 'NSBS UDUS President');
+  const [certIssuerRole, setCertIssuerRole] = useState('President, NSBS UDUS');
+  const [certOrganization, setCertOrganization] = useState('NIGERIAN SOCIETY OF BIOCHEMISTRY STUDENTS (NSBS)');
+  const [certUniversity, setCertUniversity] = useState('USMANU DANFODIYO UNIVERSITY, SOKOTO');
+  const [certDate, setCertDate] = useState(new Date().toISOString().slice(0, 10));
+  const [certLogo, setCertLogo] = useState<string | undefined>();
+  const [certSignature, setCertSignature] = useState<string | undefined>();
+  const [editingCertificateId, setEditingCertificateId] = useState<string | null>(null);
 
   // Handle Admin Login
   const handleAdminLoginSubmit = (e: React.FormEvent) => {
@@ -729,19 +746,64 @@ export const AdminDashboard: React.FC = () => {
 
   const handleIssueCertSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!certStudentName) return;
+    if (!certStudentName.trim() || !certProgTitle.trim() || !certTitle.trim() || !certIssuerName.trim() || !certIssuerRole.trim()) {
+      showToast('Complete the recipient, achievement, certificate title, and signatory fields before saving.', 'warning');
+      return;
+    }
+    const matchedStudent = registeredStudents.find(student => student.id === certStudentId) ||
+      registeredStudents.find(student => student.fullName.trim().toLocaleLowerCase() === certStudentName.trim().toLocaleLowerCase());
+    const certificateData = {
+      studentId: matchedStudent?.id || certStudentId || `manual-${Date.now()}`,
+      studentName: certStudentName.trim(),
+      programmeTitle: certProgTitle.trim(),
+      category: certCategory.trim() || 'Certificate',
+      issueDate: certDate,
+      issuerName: certIssuerName.trim(),
+      issuerRole: certIssuerRole.trim(),
+      certificateTitle: certTitle.trim(),
+      completionStatement: certStatement.trim(),
+      organizationName: certOrganization.trim(),
+      universityName: certUniversity.trim(),
+      logoDataUrl: certLogo,
+      signatureDataUrl: certSignature
+    };
 
-    issueCertificate({
-      studentId: `stud-${Date.now()}`,
-      studentName: certStudentName,
-      programmeTitle: certProgTitle,
-      category: certCategory,
-      issuerName: siteSettings.presidentName || 'NSBS UDUS President',
-      issuerRole: 'President, NSBS UDUS'
-    });
+    if (editingCertificateId) {
+      updateCertificate(editingCertificateId, certificateData);
+      showToast('Issued certificate details saved. The student will see the revised certificate.', 'success');
+    } else {
+      const issued = issueCertificate(certificateData);
+      showToast(`Certificate ${issued.certificateCode} issued to ${issued.studentName}.`, 'success');
+    }
+    setEditingCertificateId(null);
+  };
 
-    setCertStudentName('');
-    showToast(`Verifiable Certificate generated for ${certStudentName}!`);
+  const handleEditCertificate = (certificate: Certificate) => {
+    setEditingCertificateId(certificate.id);
+    setCertStudentId(certificate.studentId || '');
+    setCertStudentName(certificate.studentName || '');
+    setCertProgTitle(certificate.programmeTitle || '');
+    setCertCategory(certificate.category || 'Certificate');
+    setCertTitle(certificate.certificateTitle || 'Certificate of Achievement');
+    setCertStatement(certificate.completionStatement || 'This certificate is proudly presented to');
+    setCertIssuerName(certificate.issuerName || siteSettings.presidentName || 'NSBS UDUS President');
+    setCertIssuerRole(certificate.issuerRole || 'President, NSBS UDUS');
+    setCertOrganization(certificate.organizationName || 'NIGERIAN SOCIETY OF BIOCHEMISTRY STUDENTS (NSBS)');
+    setCertUniversity(certificate.universityName || 'USMANU DANFODIYO UNIVERSITY, SOKOTO');
+    setCertDate(certificate.issueDate || new Date().toISOString().slice(0, 10));
+    setCertLogo(certificate.logoDataUrl);
+    setCertSignature(certificate.signatureDataUrl);
+  };
+
+  const handleCertificateImage = async (file: File | undefined, kind: 'logo' | 'signature') => {
+    if (!file) return;
+    try {
+      const image = await fileToOptimizedDataUrl(file, { maxWidth: kind === 'logo' ? 900 : 1000, maxHeight: kind === 'logo' ? 500 : 320, quality: 0.88, maxBytes: 400_000 });
+      (kind === 'logo' ? setCertLogo : setCertSignature)(image);
+      showToast(`${kind === 'logo' ? 'Logo' : 'Signature'} added to the certificate preview.`, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : `Unable to process this ${kind}.`, 'warning');
+    }
   };
 
   // -------------------------------------------------------------
@@ -2965,47 +3027,147 @@ export const AdminDashboard: React.FC = () => {
             {/* SECTION: CERTIFICATE ISSUER                                    */}
             {/* ============================================================== */}
             {currentSection === 'certificates' && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
-                <div>
-                  <h3 className="font-display-academic text-lg font-bold text-slate-900">
-                    Official Certificate Issuance System
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Issue verifiable academic certificates for tutorial completions, competitions, or masterclasses.
-                  </p>
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h3 className="font-display-academic text-lg font-bold text-slate-900">Certificate studio &amp; issuance</h3>
+                    <p className="text-xs text-slate-500 mt-1">Create, live-preview, issue, revise, and download genuine landscape PDF certificates. Student details are copied into the credential at issue time.</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-900">{certificates.length} issued</span>
                 </div>
 
-                <form onSubmit={handleIssueCertSubmit} className="space-y-3 text-xs max-w-lg">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Student Full Name:</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Enter student full name"
-                      value={certStudentName}
-                      onChange={(e) => setCertStudentName(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-300"
-                    />
+                <form onSubmit={handleIssueCertSubmit} className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+                  <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-5 text-xs">
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                      <div>
+                        <h4 className="font-bold text-slate-900">{editingCertificateId ? 'Edit issued certificate' : 'New certificate'}</h4>
+                        <p className="mt-1 text-[11px] text-slate-500">Fields below update the live preview.</p>
+                      </div>
+                      {editingCertificateId && <button type="button" onClick={() => setEditingCertificateId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-50">New certificate</button>}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="sm:col-span-2">
+                        <label className="block font-semibold text-slate-700 mb-1">Link to a registered student (recommended)</label>
+                        <select value={certStudentId} onChange={event => { const student = registeredStudents.find(item => item.id === event.target.value); setCertStudentId(event.target.value); if (student) setCertStudentName(student.fullName); }} className="w-full p-2.5 rounded-lg border border-slate-300 bg-white">
+                          <option value="">Manual recipient / not in student list</option>
+                          {registeredStudents.map(student => <option key={student.id} value={student.id}>{student.fullName} · {student.matricNumber}</option>)}
+                        </select>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block font-semibold text-slate-700 mb-1">Name exactly as it should appear</label>
+                        <input required value={certStudentName} onChange={event => setCertStudentName(event.target.value)} placeholder="Student full name" className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block font-semibold text-slate-700 mb-1">Programme / achievement awarded</label>
+                        <input required value={certProgTitle} onChange={event => setCertProgTitle(event.target.value)} placeholder="e.g. Clinical Diagnostics Workshop" className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Certificate heading</label>
+                        <input required value={certTitle} onChange={event => setCertTitle(event.target.value)} className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Category</label>
+                        <input value={certCategory} onChange={event => setCertCategory(event.target.value)} placeholder="Workshop, award, etc." className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block font-semibold text-slate-700 mb-1">Presentation statement</label>
+                        <input value={certStatement} onChange={event => setCertStatement(event.target.value)} className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Issuing organization</label>
+                        <input value={certOrganization} onChange={event => setCertOrganization(event.target.value)} className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">University / institution</label>
+                        <input value={certUniversity} onChange={event => setCertUniversity(event.target.value)} className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Signatory name</label>
+                        <input required value={certIssuerName} onChange={event => setCertIssuerName(event.target.value)} className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Signatory title / role</label>
+                        <input required value={certIssuerRole} onChange={event => setCertIssuerRole(event.target.value)} className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Issue date</label>
+                        <input type="date" required value={certDate} onChange={event => setCertDate(event.target.value)} className="w-full p-2.5 rounded-lg border border-slate-300" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-slate-200 p-3">
+                        <div className="text-xs font-semibold text-slate-800">Organization logo</div>
+                        <p className="mt-1 text-[10px] text-slate-500">Uploaded image is embedded in the saved certificate and PDF.</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <label className="cursor-pointer rounded-lg bg-slate-100 px-3 py-2 text-[11px] font-semibold hover:bg-slate-200">{certLogo ? 'Replace logo' : 'Upload logo'}<input type="file" accept="image/*" className="sr-only" onChange={event => { void handleCertificateImage(event.target.files?.[0], 'logo'); event.currentTarget.value = ''; }} /></label>
+                          {certLogo && <button type="button" onClick={() => setCertLogo(undefined)} className="text-[11px] font-semibold text-red-700 hover:underline">Remove</button>}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 p-3">
+                        <div className="text-xs font-semibold text-slate-800">Signature image</div>
+                        <p className="mt-1 text-[10px] text-slate-500">A handwritten signature scan or image. The signatory name remains editable.</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <label className="cursor-pointer rounded-lg bg-slate-100 px-3 py-2 text-[11px] font-semibold hover:bg-slate-200">{certSignature ? 'Replace signature' : 'Upload signature'}<input type="file" accept="image/*" className="sr-only" onChange={event => { void handleCertificateImage(event.target.files?.[0], 'signature'); event.currentTarget.value = ''; }} /></label>
+                          {certSignature && <button type="button" onClick={() => setCertSignature(undefined)} className="text-[11px] font-semibold text-red-700 hover:underline">Remove</button>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+                      <button type="submit" className="rounded-lg bg-blue-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-800">
+                        {editingCertificateId ? 'Save certificate edits' : 'Issue certificate'}
+                      </button>
+                      {!editingCertificateId && <span className="text-[10px] text-slate-500">Unique certificate ID is assigned automatically.</span>}
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Programme / Achievement Title:</label>
-                    <input
-                      type="text"
-                      required
-                      value={certProgTitle}
-                      onChange={(e) => setCertProgTitle(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-300"
-                    />
+                  <div className="space-y-3 xl:sticky xl:top-24">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-slate-900">Live certificate preview</h4>
+                      <span className="text-[10px] text-slate-500">Landscape A4</span>
+                    </div>
+                    <CertificateArtwork preview certificate={{
+                      studentId: certStudentId,
+                      studentName: certStudentName,
+                      programmeTitle: certProgTitle,
+                      category: certCategory,
+                      issueDate: certDate,
+                      issuerName: certIssuerName,
+                      issuerRole: certIssuerRole,
+                      verificationUrl: editingCertificateId ? certificates.find(cert => cert.id === editingCertificateId)?.verificationUrl || '' : 'Assigned on issue',
+                      certificateCode: editingCertificateId ? certificates.find(cert => cert.id === editingCertificateId)?.certificateCode || 'NSBS-UDUS-PREVIEW' : 'Assigned on issue',
+                      certificateTitle: certTitle,
+                      completionStatement: certStatement,
+                      organizationName: certOrganization,
+                      universityName: certUniversity,
+                      logoDataUrl: certLogo,
+                      signatureDataUrl: certSignature
+                    }} />
+                    <p className="text-[10px] leading-relaxed text-slate-500">The downloaded PDF embeds this logo and signature and preserves the issued recipient name, award, date, and unique certificate ID.</p>
                   </div>
-
-                  <button
-                    type="submit"
-                    className="px-4 py-2.5 rounded-lg bg-blue-900 text-white font-semibold"
-                  >
-                    Generate &amp; Issue Verifiable Certificate
-                  </button>
                 </form>
+
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                  <h4 className="font-display-academic font-bold text-slate-900">Issued certificates</h4>
+                  {certificates.length === 0 ? <p className="mt-3 text-xs text-slate-500">No certificates have been issued yet.</p> : (
+                    <div className="mt-3 divide-y divide-slate-100">
+                      {certificates.map(certificate => (
+                        <div key={certificate.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm text-slate-900">{certificate.studentName} · {certificate.programmeTitle}</div>
+                            <div className="mt-1 text-[10px] text-slate-500 font-mono">{certificate.certificateCode} · {certificate.issueDate} · {certificate.category}</div>
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            <button type="button" onClick={() => handleEditCertificate(certificate)} className="rounded-lg border border-blue-200 px-3 py-1.5 text-[11px] font-semibold text-blue-900 hover:bg-blue-50">Edit &amp; preview</button>
+                            <button type="button" onClick={() => downloadCertificatePdf(certificate)} className="rounded-lg bg-blue-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-blue-800">Download PDF</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

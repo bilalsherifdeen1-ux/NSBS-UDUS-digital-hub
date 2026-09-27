@@ -197,6 +197,7 @@ export interface StudentUser {
   phone: string;
   interests: string[];
   profilePhoto?: string;
+  futureAspirations?: string[];
   joinedDate: string;
   onboardingCompleted: boolean;
   stateOfOrigin?: string;
@@ -214,6 +215,12 @@ export interface Certificate {
   issuerName: string;
   issuerRole: string;
   verificationUrl: string;
+  certificateTitle: string;
+  completionStatement: string;
+  organizationName: string;
+  universityName: string;
+  logoDataUrl?: string;
+  signatureDataUrl?: string;
 }
 
 export interface FeedbackSubmission {

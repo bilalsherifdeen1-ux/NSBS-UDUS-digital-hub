@@ -51,3 +51,214 @@
   scroll-snap-align: start;
 }
 
+.certificate-artwork {
+  --certificate-navy: #0c2340;
+  --certificate-gold: #b58b30;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 297 / 210;
+  min-height: 300px;
+  padding: 2.4%;
+  color: #1e293b;
+  background: #fffefa;
+  border: 3px solid var(--certificate-navy);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .14);
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.certificate-artwork-inner {
+  height: 100%;
+  min-height: 0;
+  padding: 2.6% 5.5%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  border: 1px solid var(--certificate-gold);
+  outline: 1px solid rgba(12, 35, 64, .2);
+  outline-offset: 4px;
+  overflow: hidden;
+}
+
+.certificate-artwork-brand {
+  position: relative;
+  width: 100%;
+  min-height: 14%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--certificate-navy);
+}
+
+.certificate-artwork-logo,
+.certificate-artwork-seal {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.certificate-artwork-seal {
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--certificate-gold);
+  border-radius: 50%;
+  color: var(--certificate-navy);
+  font: 700 11px Georgia, serif;
+  letter-spacing: .08em;
+}
+
+.certificate-artwork-brandcopy p,
+.certificate-artwork-brandcopy span {
+  display: block;
+  margin: 0;
+  max-width: 90%;
+  line-height: 1.35;
+}
+
+.certificate-artwork-brandcopy p {
+  font: 700 clamp(7px, 1.05vw, 13px) Georgia, serif;
+  letter-spacing: .1em;
+}
+
+.certificate-artwork-brandcopy span {
+  margin-top: 3px;
+  color: #64748b;
+  font: 600 clamp(6px, .75vw, 10px) Inter, sans-serif;
+  letter-spacing: .06em;
+}
+
+.certificate-artwork-rule {
+  width: 100%;
+  border-top: 1px solid var(--certificate-gold);
+}
+
+.certificate-artwork-kicker,
+.certificate-artwork-statement,
+.certificate-artwork-body,
+.certificate-artwork-date {
+  margin: 0;
+  color: #64748b;
+}
+
+.certificate-artwork-kicker {
+  color: var(--certificate-gold);
+  font: 700 clamp(6px, .65vw, 9px) Inter, sans-serif;
+  letter-spacing: .2em;
+}
+
+.certificate-artwork h2 {
+  max-width: 100%;
+  margin: 0;
+  color: var(--certificate-navy);
+  font: 700 clamp(17px, 2.25vw, 31px) Georgia, serif;
+  line-height: 1.05;
+}
+
+.certificate-artwork-statement,
+.certificate-artwork-body {
+  font-size: clamp(8px, .9vw, 12px);
+  font-style: italic;
+}
+
+.certificate-artwork-recipient {
+  max-width: 96%;
+  margin: 0;
+  padding: 0 14px 5px;
+  color: var(--certificate-navy);
+  border-bottom: 1px solid var(--certificate-gold);
+  font: 700 clamp(16px, 2.2vw, 30px) Georgia, serif;
+  line-height: 1.1;
+}
+
+.certificate-artwork-programme {
+  max-width: 95%;
+  margin: 0;
+  color: var(--certificate-navy);
+  font: 700 clamp(10px, 1.2vw, 16px) Inter, sans-serif;
+}
+
+.certificate-artwork-date {
+  font: 500 clamp(7px, .75vw, 10px) Inter, sans-serif;
+}
+
+.certificate-artwork-footer {
+  width: 100%;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.certificate-artwork-signatory,
+.certificate-artwork-verification {
+  min-width: 0;
+  width: 43%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #64748b;
+  font: 500 clamp(6px, .7vw, 9px) Inter, sans-serif;
+}
+
+.certificate-artwork-signature {
+  width: 105px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.certificate-artwork-typed-signature {
+  max-width: 100%;
+  height: 32px;
+  color: var(--certificate-navy);
+  font: italic 17px Georgia, serif;
+}
+
+.certificate-artwork-signature-line {
+  width: 100%;
+  margin: 0 0 4px;
+  border-top: 1px solid var(--certificate-navy);
+}
+
+.certificate-artwork-signatory strong,
+.certificate-artwork-verification strong {
+  max-width: 100%;
+  color: var(--certificate-navy);
+  font-size: clamp(7px, .75vw, 10px);
+}
+
+.certificate-artwork-verification span {
+  font-size: clamp(6px, .6vw, 8px);
+  letter-spacing: .12em;
+}
+
+.certificate-artwork-verification small {
+  font-size: clamp(6px, .65vw, 8px);
+}
+
+.certificate-artwork-preview {
+  min-height: 235px;
+  border-width: 2px;
+}
+
+.certificate-artwork-preview .certificate-artwork-logo,
+.certificate-artwork-preview .certificate-artwork-seal {
+  width: 38px;
+  height: 38px;
+}
+
+.certificate-artwork-preview .certificate-artwork-inner {
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .certificate-artwork { min-height: 235px; padding: 2%; border-width: 2px; }
+  .certificate-artwork-inner { padding: 2.5% 4%; }
+  .certificate-artwork-logo, .certificate-artwork-seal { width: 30px; height: 30px; }
+  .certificate-artwork-footer { gap: 8px; }
+}

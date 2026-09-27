@@ -30,9 +30,14 @@ import { StudentDashboard } from './components/student/StudentDashboard';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
 import { CheckCircle2, Info, AlertTriangle } from 'lucide-react';
+import { CertificateArtwork } from './components/common/CertificateArtwork';
 
 const MainContent: React.FC = () => {
-  const { activePage, toast } = useApp();
+  const { activePage, toast, certificates, setActivePage } = useApp();
+  const verificationCode = new URLSearchParams(window.location.search).get('certificate');
+  const verifiedCertificate = verificationCode
+    ? certificates.find(certificate => certificate.certificateCode.toUpperCase() === verificationCode.trim().toUpperCase())
+    : undefined;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 pb-16 xl:pb-0">
@@ -40,7 +45,24 @@ const MainContent: React.FC = () => {
       <GlobalSearchModal />
 
       <main className="flex-1">
-        {activePage === 'home' && (
+        {verificationCode ? (
+          <section className="min-h-[75vh] bg-slate-50 px-4 py-12 sm:px-8">
+            <div className="mx-auto max-w-5xl space-y-6">
+              <div className={`rounded-xl border p-6 shadow-sm ${verifiedCertificate ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                <div className="flex items-center gap-3">
+                  {verifiedCertificate ? <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-700" /> : <AlertTriangle className="h-8 w-8 shrink-0 text-amber-700" />}
+                  <div>
+                    <h1 className="font-display-academic text-xl font-bold text-slate-900">{verifiedCertificate ? 'Certificate found in the NSBS registry' : 'Certificate record not found'}</h1>
+                    <p className="mt-1 break-all font-mono text-xs text-slate-600">Verification code: {verificationCode}</p>
+                  </div>
+                </div>
+                {!verifiedCertificate && <p className="mt-4 text-sm text-slate-700">Check that you have the complete code and try again. This browser's stored NSBS registry does not contain this certificate.</p>}
+              </div>
+              {verifiedCertificate && <CertificateArtwork certificate={verifiedCertificate} />}
+              <button onClick={() => { window.history.replaceState({}, '', window.location.pathname); setActivePage('home'); }} className="rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800">Return to NSBS homepage</button>
+            </div>
+          </section>
+        ) : activePage === 'home' && (
           <>
             <HeroSection />
             <HomeAnnouncements />
@@ -52,20 +74,20 @@ const MainContent: React.FC = () => {
           </>
         )}
 
-        {activePage === 'about' && <AboutView />}
-        {activePage === 'academics' && <AcademicsView />}
-        {activePage === 'resources' && <LibraryView />}
-        {activePage === 'ailab' && <AILabView />}
-        {activePage === 'events' && <EventsView />}
-        {activePage === 'opportunities' && <OpportunitiesView />}
-        {activePage === 'research' && <ResearchView />}
-        {activePage === 'programmes' && <ProgrammesView />}
-        {activePage === 'executives' && <ExecutivesView />}
-        {activePage === 'news' && <NewsView />}
-        {activePage === 'gallery' && <GalleryView />}
-        {activePage === 'contact' && <ContactView />}
-        {activePage === 'student-portal' && <StudentDashboard />}
-        {activePage === 'admin-dashboard' && <AdminDashboard />}
+        {!verificationCode && activePage === 'about' && <AboutView />}
+        {!verificationCode && activePage === 'academics' && <AcademicsView />}
+        {!verificationCode && activePage === 'resources' && <LibraryView />}
+        {!verificationCode && activePage === 'ailab' && <AILabView />}
+        {!verificationCode && activePage === 'events' && <EventsView />}
+        {!verificationCode && activePage === 'opportunities' && <OpportunitiesView />}
+        {!verificationCode && activePage === 'research' && <ResearchView />}
+        {!verificationCode && activePage === 'programmes' && <ProgrammesView />}
+        {!verificationCode && activePage === 'executives' && <ExecutivesView />}
+        {!verificationCode && activePage === 'news' && <NewsView />}
+        {!verificationCode && activePage === 'gallery' && <GalleryView />}
+        {!verificationCode && activePage === 'contact' && <ContactView />}
+        {!verificationCode && activePage === 'student-portal' && <StudentDashboard />}
+        {!verificationCode && activePage === 'admin-dashboard' && <AdminDashboard />}
       </main>
 
       <Footer />

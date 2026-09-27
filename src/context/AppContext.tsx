@@ -117,7 +117,8 @@ interface AppContextType {
   deleteGalleryItem: (id: string) => void;
   
   certificates: Certificate[];
-  issueCertificate: (cert: Omit<Certificate, 'id' | 'certificateCode' | 'issueDate' | 'verificationUrl'>) => Certificate;
+  issueCertificate: (cert: Omit<Certificate, 'id' | 'certificateCode' | 'issueDate' | 'verificationUrl'> & { issueDate?: string }) => Certificate;
+  updateCertificate: (id: string, updated: Partial<Certificate>) => void;
   
   feedbackList: FeedbackSubmission[];
   submitFeedback: (feedback: Omit<FeedbackSubmission, 'id' | 'submittedAt' | 'status'>) => void;
@@ -1082,19 +1083,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Gallery item removed.');
   };
 
-  const issueCertificate = (cert: Omit<Certificate, 'id' | 'certificateCode' | 'issueDate' | 'verificationUrl'>): Certificate => {
-    const code = `NSBS-UDUS-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+  const issueCertificate = (cert: Omit<Certificate, 'id' | 'certificateCode' | 'issueDate' | 'verificationUrl'> & { issueDate?: string }): Certificate => {
+    let code = '';
+    do {
+      code = `NSBS-UDUS-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    } while (certificates.some(existing => existing.certificateCode === code));
     const newCert: Certificate = {
       ...cert,
       id: `cert-${Date.now()}`,
       certificateCode: code,
-      issueDate: new Date().toISOString().split('T')[0],
-      verificationUrl: `https://nsbs-udus.org/verify/${code}`
+      issueDate: cert.issueDate || new Date().toISOString().split('T')[0],
+      verificationUrl: `${window.location.origin}/?certificate=${encodeURIComponent(code)}`
     };
     setCertificates(prev => [newCert, ...prev]);
     logAdminAction('ISSUE_CERTIFICATE', newCert.certificateCode, `Awarded to ${newCert.studentName} for ${newCert.programmeTitle}.`);
     showToast(`Official Certificate issued for ${newCert.studentName}!`);
     return newCert;
+  };
+
+  const updateCertificate = (id: string, updated: Partial<Certificate>) => {
+    setCertificates(prev => prev.map(cert => cert.id === id ? { ...cert, ...updated } : cert));
+    const existing = certificates.find(cert => cert.id === id);
+    logAdminAction('UPDATE_CERTIFICATE', existing?.certificateCode || id, `Updated certificate details for ${updated.studentName || existing?.studentName || 'student'}.`);
+    showToast('Certificate details updated.');
   };
 
   const submitFeedback = (feedback: Omit<FeedbackSubmission, 'id' | 'submittedAt' | 'status'>) => {
@@ -1179,6 +1190,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteGalleryItem,
         certificates,
         issueCertificate,
+        updateCertificate,
         feedbackList,
         submitFeedback,
         updateFeedbackStatus,
