@@ -36,7 +36,7 @@ export const HeroSection: React.FC = () => {
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>USMANU DANFODIYO UNIVERSITY, SOKOTO</span>
           <span className="text-slate-400">·</span>
-          <span>2026/2027 ACADEMIC SESSION</span>
+              <span>{siteSettings.session.toUpperCase()}</span>
         </div>
 
         {/* Hero Main Headline & Text */}
@@ -96,7 +96,7 @@ export const HeroSection: React.FC = () => {
             >
               <UserCheck className="w-5 h-5 text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
               <div className="font-semibold text-sm text-white">Student Portal</div>
-              <div className="text-[11px] text-slate-400 mt-1">Profile, bookmarks & verified ID</div>
+              <div className="text-[11px] text-slate-400 mt-1">Profile, bookmarks & student ID</div>
             </div>
 
             <div 

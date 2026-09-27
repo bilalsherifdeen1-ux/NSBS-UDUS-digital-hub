@@ -1129,6 +1129,7 @@ export const initialResearchProjects: ResearchProject[] = [
 
 export const initialPastAdministrations: AdministrationArchive[] = [
   {
+    id: 'archive-2025-2026',
     session: '2025/2026',
     theme: 'Consolidating Excellence through Innovation and Unity',
     president: 'Executive President (2025/2026)',
@@ -1142,6 +1143,7 @@ export const initialPastAdministrations: AdministrationArchive[] = [
     documentsCount: 14
   },
   {
+    id: 'archive-2024-2025',
     session: '2024/2025',
     theme: 'Rekindling Scientific Curiosity and Academic Rigor',
     president: 'Executive President (2024/2025)',

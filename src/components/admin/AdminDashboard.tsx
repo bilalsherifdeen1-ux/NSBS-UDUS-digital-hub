@@ -12,7 +12,8 @@ import {
   EventCategory,
   AuditLog,
   FeedbackSubmission,
-  Certificate
+  Certificate,
+  AdministrationArchive
 } from '../../types';
 import { 
   ShieldCheck, 
@@ -136,6 +137,10 @@ export const AdminDashboard: React.FC = () => {
     updateExecutive, 
     deleteExecutive, 
     reorderExecutives,
+    pastAdministrations,
+    addPastAdministration,
+    updatePastAdministration,
+    deletePastAdministration,
     researchProjects, 
     updateResearchProjectStatus, 
     feedbackList, 
@@ -189,7 +194,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Active section
   const [currentSection, setCurrentSection] = useState<
-    'executives' | 'overview' | 'resources' | 'events' | 'announcements' | 'opportunities' | 'ailab' | 'feedback' | 'certificates' | 'audit' | 'settings'
+    'executives' | 'past-executives' | 'overview' | 'resources' | 'events' | 'announcements' | 'opportunities' | 'ailab' | 'feedback' | 'certificates' | 'audit' | 'settings'
   >('executives');
 
   // Executive Settings State
@@ -198,6 +203,8 @@ export const AdminDashboard: React.FC = () => {
 
   // Temporary edit buffer for each executive
   const [execEditData, setExecEditData] = useState<{ [id: string]: Partial<Executive> }>({});
+  const [editingPastArchiveId, setEditingPastArchiveId] = useState<string | null>(null);
+  const [pastArchiveDraft, setPastArchiveDraft] = useState<AdministrationArchive | null>(null);
 
   // Resource Form State
   const [resTitle, setResTitle] = useState('');
@@ -248,7 +255,7 @@ export const AdminDashboard: React.FC = () => {
   // Listen for navigation requests from other parts of the app
   useEffect(() => {
     const targetSection = sessionStorage.getItem('nsbs_admin_section') as any;
-    if (targetSection && ['executives', 'overview', 'resources', 'events', 'announcements', 'opportunities', 'ailab', 'feedback', 'certificates', 'audit', 'settings'].includes(targetSection)) {
+    if (targetSection && ['executives', 'past-executives', 'overview', 'resources', 'events', 'announcements', 'opportunities', 'ailab', 'feedback', 'certificates', 'audit', 'settings'].includes(targetSection)) {
       setCurrentSection(targetSection);
       sessionStorage.removeItem('nsbs_admin_section');
     }
@@ -314,6 +321,61 @@ export const AdminDashboard: React.FC = () => {
       setLoginUsername('');
       setLoginPassword('');
     }
+  };
+
+  const beginNewPastArchive = () => {
+    setEditingPastArchiveId('__new__');
+    setPastArchiveDraft({ id: `archive-${Date.now()}`, session: '', theme: '', president: '', executivesCount: 0, achievements: [], summary: '', documentsCount: 0, executives: [] });
+  };
+
+  const beginEditPastArchive = (archive: AdministrationArchive) => {
+    setEditingPastArchiveId(archive.id || archive.session);
+    setPastArchiveDraft({ ...archive, id: archive.id || archive.session, achievements: [...(archive.achievements || [])], executives: (archive.executives || []).map(executive => ({ ...executive, responsibilities: [...(executive.responsibilities || [])] })) });
+  };
+
+  const updatePastExecutiveDraft = (index: number, updated: Partial<Executive>) => {
+    setPastArchiveDraft(current => current ? ({ ...current, executives: (current.executives || []).map((executive, itemIndex) => itemIndex === index ? { ...executive, ...updated } : executive) }) : current);
+  };
+
+  const addPastExecutiveDraft = () => {
+    setPastArchiveDraft(current => {
+      if (!current) return current;
+      const executives = current.executives || [];
+      const order = executives.length + 1;
+      const executive: Executive = { id: `past-exec-${Date.now()}-${order}`, name: '', position: 'Executive Member', portfolio: '', level: 'General', areasOfInterest: '', biography: '', responsibilities: [], photoUrl: '', email: '', phone: '', linkedIn: '', order };
+      return { ...current, executives: [...executives, executive] };
+    });
+  };
+
+  const savePastArchiveDraft = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!pastArchiveDraft || !editingPastArchiveId) return;
+    const session = pastArchiveDraft.session.trim();
+    if (!session) {
+      showToast('Enter the academic session for this archive.', 'warning');
+      return;
+    }
+    const conflicts = pastAdministrations.some(archive => archive.id !== pastArchiveDraft.id && archive.session.trim().toLowerCase() === session.toLowerCase());
+    if (conflicts) {
+      showToast('An archive already exists for this academic session.', 'warning');
+      return;
+    }
+    const executives = (pastArchiveDraft.executives || []).filter(executive => executive.name.trim() || executive.position.trim()).map((executive, index) => ({ ...executive, order: index + 1 }));
+    const normalized: AdministrationArchive = {
+      ...pastArchiveDraft,
+      session,
+      theme: pastArchiveDraft.theme.trim(),
+      president: pastArchiveDraft.president.trim(),
+      summary: pastArchiveDraft.summary.trim(),
+      achievements: pastArchiveDraft.achievements.map(item => item.trim()).filter(Boolean),
+      executives,
+      executivesCount: executives.length || Math.max(0, Number(pastArchiveDraft.executivesCount) || 0),
+      documentsCount: Math.max(0, Number(pastArchiveDraft.documentsCount) || 0)
+    };
+    if (editingPastArchiveId === '__new__') addPastAdministration(normalized);
+    else updatePastAdministration(editingPastArchiveId, normalized);
+    setEditingPastArchiveId(null);
+    setPastArchiveDraft(null);
   };
 
   // Administrative Password Reset Handlers
@@ -1090,7 +1152,7 @@ export const AdminDashboard: React.FC = () => {
 
           {/* Footer note */}
           <div className="bg-slate-50 px-6 py-3 text-[11px] text-slate-500 text-center border-t border-slate-100">
-            Protected by cryptographic session validation · Access is strictly monitored
+            Browser-local portal: profiles and changes are saved only in this browser; there is no shared server-side administrator authentication.
           </div>
         </div>
       </div>
@@ -1125,7 +1187,7 @@ export const AdminDashboard: React.FC = () => {
             <h1 className="font-display-academic text-3xl sm:text-4xl font-bold tracking-tight text-white flex items-center gap-3">
               <span>Welcome Admin</span>
               <span className="text-xs font-mono font-normal px-2.5 py-1 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40">
-                Session 2026/2027
+                {siteSettings.session}
               </span>
             </h1>
             
@@ -1164,6 +1226,7 @@ export const AdminDashboard: React.FC = () => {
             </span>
             <span className="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
               {currentSection === 'executives' && 'Executive Settings (19)'}
+              {currentSection === 'past-executives' && `Past Executives & Archives (${pastAdministrations.length})`}
               {currentSection === 'overview' && 'Metrics & Overview'}
               {currentSection === 'resources' && `Digital Library (${resources.length})`}
               {currentSection === 'events' && `Events (${events.length})`}
@@ -1190,6 +1253,15 @@ export const AdminDashboard: React.FC = () => {
             >
               <Users className="w-3.5 h-3.5 text-amber-400" />
               <span>Executives (19)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCurrentSection('past-executives')}
+              className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${currentSection === 'past-executives' ? 'bg-blue-900 text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Past Executives</span>
             </button>
 
             <button
@@ -1350,6 +1422,15 @@ export const AdminDashboard: React.FC = () => {
                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${currentSection === 'executives' ? 'bg-blue-800 text-amber-300' : 'bg-slate-100 text-slate-600'}`}>
                   19
                 </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentSection('past-executives')}
+                className={`w-full text-left px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 transition-colors ${currentSection === 'past-executives' ? 'bg-blue-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+              >
+                <History className="w-4 h-4" />
+                <span>Past Executives &amp; Archives ({pastAdministrations.length})</span>
               </button>
 
               <button
@@ -3195,6 +3276,91 @@ export const AdminDashboard: React.FC = () => {
             )}
 
             {/* ============================================================== */}
+            {/* SECTION: PAST EXECUTIVES & ARCHIVES                            */}
+            {/* ============================================================== */}
+            {currentSection === 'past-executives' && (
+              <div className="space-y-6">
+                <div className="rounded-xl border border-blue-200 bg-white p-6 shadow-sm">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="font-display-academic text-xl font-bold text-slate-900">Past Executives &amp; Administration Archives</h2>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600">Edit historical session summaries, achievements and document counts, and maintain each administration’s individual executive directory.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => { sessionStorage.setItem('nsbs_executives_tab', 'past'); setActivePage('executives'); window.dispatchEvent(new Event('nsbs:open-past-executives')); }} className="shrink-0 rounded-lg border border-blue-200 px-4 py-2.5 text-xs font-bold text-blue-900 hover:bg-blue-50">Preview public archive</button>
+                    <button type="button" onClick={beginNewPastArchive} className="shrink-0 rounded-lg bg-blue-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-800">
+                      <Plus className="mr-1 inline h-3.5 w-3.5" />Add administration
+                    </button>
+                    </div>
+                  </div>
+                </div>
+
+                {pastArchiveDraft && (
+                  <form onSubmit={savePastArchiveDraft} className="space-y-5 rounded-xl border border-amber-200 bg-white p-5 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                      <div>
+                        <h3 className="font-display-academic text-lg font-bold text-slate-900">{editingPastArchiveId === '__new__' ? 'Create past administration archive' : `Edit ${pastArchiveDraft.session} administration`}</h3>
+                        <p className="mt-1 text-[11px] text-slate-500">Changes are shown on the public Past Administrations page.</p>
+                      </div>
+                      <button type="button" onClick={() => { setEditingPastArchiveId(null); setPastArchiveDraft(null); }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <label className="text-xs font-semibold text-slate-700">Academic session<input required value={pastArchiveDraft.session} onChange={event => setPastArchiveDraft(current => current ? ({ ...current, session: event.target.value }) : current)} placeholder="e.g. 2023/2024" className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 font-normal" /></label>
+                      <label className="text-xs font-semibold text-slate-700">President’s name<input value={pastArchiveDraft.president} onChange={event => setPastArchiveDraft(current => current ? ({ ...current, president: event.target.value }) : current)} placeholder="Full name" className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 font-normal" /></label>
+                      <label className="text-xs font-semibold text-slate-700">Administration theme<input value={pastArchiveDraft.theme} onChange={event => setPastArchiveDraft(current => current ? ({ ...current, theme: event.target.value }) : current)} placeholder="Leadership theme" className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 font-normal" /></label>
+                      <label className="text-xs font-semibold text-slate-700">Executive count<input type="number" min="0" value={pastArchiveDraft.executivesCount} onChange={event => setPastArchiveDraft(current => current ? ({ ...current, executivesCount: Number(event.target.value) }) : current)} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 font-normal" /></label>
+                      <label className="text-xs font-semibold text-slate-700">Archived document count<input type="number" min="0" value={pastArchiveDraft.documentsCount} onChange={event => setPastArchiveDraft(current => current ? ({ ...current, documentsCount: Number(event.target.value) }) : current)} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 font-normal" /></label>
+                    </div>
+
+                    <label className="block text-xs font-semibold text-slate-700">Archive summary<textarea rows={3} value={pastArchiveDraft.summary} onChange={event => setPastArchiveDraft(current => current ? ({ ...current, summary: event.target.value }) : current)} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 font-normal" /></label>
+                    <label className="block text-xs font-semibold text-slate-700">Key achievements <span className="font-normal text-slate-500">(one per line)</span><textarea rows={4} value={pastArchiveDraft.achievements.join('\n')} onChange={event => setPastArchiveDraft(current => current ? ({ ...current, achievements: event.target.value.split('\n') }) : current)} className="mt-1 w-full rounded-lg border border-slate-300 p-2.5 font-normal" /></label>
+
+                    <div className="space-y-3 border-t border-slate-100 pt-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div><h4 className="text-sm font-bold text-slate-900">Archived executive profiles</h4><p className="mt-0.5 text-[11px] text-slate-500">Add the officers for this session; all names, roles, bios, interests, links and images can be edited.</p></div>
+                        <button type="button" onClick={addPastExecutiveDraft} className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-900 hover:bg-blue-50"><Plus className="mr-1 inline h-3.5 w-3.5" />Add executive</button>
+                      </div>
+                      {(pastArchiveDraft.executives || []).map((executive, index) => (
+                        <div key={executive.id} className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex items-center justify-between"><h5 className="text-xs font-bold text-slate-800">Executive {index + 1}</h5><button type="button" onClick={() => setPastArchiveDraft(current => current ? ({ ...current, executives: (current.executives || []).filter((_, itemIndex) => itemIndex !== index) }) : current)} className="text-[11px] font-semibold text-red-700 hover:underline">Remove executive</button></div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="text-[11px] font-semibold text-slate-700">Full name<input required aria-label={`Executive ${index + 1} full name`} value={executive.name} onChange={event => updatePastExecutiveDraft(index, { name: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700">Position<input aria-label={`Executive ${index + 1} position`} value={executive.position} onChange={event => updatePastExecutiveDraft(index, { position: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700">Portfolio<input aria-label={`Executive ${index + 1} portfolio`} value={executive.portfolio} onChange={event => updatePastExecutiveDraft(index, { portfolio: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700">Academic level<select aria-label={`Executive ${index + 1} level`} value={executive.level} onChange={event => updatePastExecutiveDraft(index, { level: event.target.value as AcademicLevel })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal">{(['General', '100L', '200L', '300L', '400L', 'Postgraduate'] as AcademicLevel[]).map(level => <option key={level}>{level}</option>)}</select></label>
+                            <label className="text-[11px] font-semibold text-slate-700">Biochemistry interests<input aria-label={`Executive ${index + 1} interests`} value={executive.areasOfInterest} onChange={event => updatePastExecutiveDraft(index, { areasOfInterest: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700">Portrait image URL<input aria-label={`Executive ${index + 1} photo`} type="url" value={executive.photoUrl} onChange={event => updatePastExecutiveDraft(index, { photoUrl: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700">Email<input aria-label={`Executive ${index + 1} email`} type="email" value={executive.email} onChange={event => updatePastExecutiveDraft(index, { email: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700">Phone<input aria-label={`Executive ${index + 1} phone`} value={executive.phone || ''} onChange={event => updatePastExecutiveDraft(index, { phone: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700 sm:col-span-2">LinkedIn or public profile URL<input aria-label={`Executive ${index + 1} LinkedIn`} type="url" value={executive.linkedIn || ''} onChange={event => updatePastExecutiveDraft(index, { linkedIn: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700 sm:col-span-2">Biography<textarea aria-label={`Executive ${index + 1} biography`} rows={3} value={executive.biography} onChange={event => updatePastExecutiveDraft(index, { biography: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                            <label className="text-[11px] font-semibold text-slate-700 sm:col-span-2">Responsibilities <span className="font-normal text-slate-500">(one per line)</span><textarea aria-label={`Executive ${index + 1} responsibilities`} rows={3} value={executive.responsibilities.join('\n')} onChange={event => updatePastExecutiveDraft(index, { responsibilities: event.target.value.split('\n') })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                      <button type="submit" className="rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-600"><Save className="mr-1 inline h-3.5 w-3.5" />Save administration</button>
+                      <button type="button" onClick={() => { setEditingPastArchiveId(null); setPastArchiveDraft(null); }} className="rounded-lg border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="space-y-3">
+                  {pastAdministrations.map(archive => (
+                    <div key={archive.id || archive.session} className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div><div className="font-semibold text-sm text-slate-900">{archive.session} · {archive.president}</div><div className="mt-1 text-[11px] text-slate-500">{archive.executives?.length || archive.executivesCount} executives · {archive.achievements.length} achievements · {archive.documentsCount} documents</div></div>
+                      <div className="flex shrink-0 gap-2"><button type="button" onClick={() => beginEditPastArchive(archive)} className="rounded-lg border border-blue-200 px-3 py-1.5 text-[11px] font-semibold text-blue-900 hover:bg-blue-50"><Edit3 className="mr-1 inline h-3 w-3" />Edit archive</button><button type="button" onClick={() => { if (window.confirm(`Remove the ${archive.session} archive and its executive profiles?`)) deletePastAdministration(archive.id || archive.session); }} className="rounded-lg border border-red-200 px-3 py-1.5 text-[11px] font-semibold text-red-700 hover:bg-red-50"><Trash2 className="mr-1 inline h-3 w-3" />Delete</button></div>
+                    </div>
+                  ))}
+                  {pastAdministrations.length === 0 && <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">No past administrations are recorded yet. Add the first archive above.</div>}
+                </div>
+              </div>
+            )}
+
+            {/* ============================================================== */}
             {/* SECTION: SETTINGS                                              */}
             {/* ============================================================== */}
             {currentSection === 'settings' && (
@@ -3246,6 +3412,13 @@ export const AdminDashboard: React.FC = () => {
                       <span>Save All Changes</span>
                     </button>
                   </div>
+                </div>
+
+                <div className="rounded-xl border border-blue-200 bg-white p-5 shadow-sm">
+                  <label className="block text-xs font-bold text-slate-800">Current academic session
+                    <input required value={siteSettings.session} onChange={event => updateSiteSettings({ session: event.target.value })} placeholder="e.g. 2027/2028 Academic Session" className="mt-2 w-full max-w-xl rounded-lg border border-slate-300 p-2.5 text-sm font-normal" />
+                  </label>
+                  <p className="mt-2 text-[11px] leading-relaxed text-slate-500">This value updates the session labels across the public website and administration dashboard immediately.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -3902,7 +4075,7 @@ export const AdminDashboard: React.FC = () => {
                             NIGERIAN SOCIETY OF BIOCHEMISTRY STUDENTS
                           </div>
                           <div className="text-[10px] text-blue-300">
-                            Usmanu Danfodiyo University, Sokoto · 2026/2027
+                            Usmanu Danfodiyo University, Sokoto · {siteSettings.session.replace(/\s*Academic Session$/i, '')}
                           </div>
                         </div>
                       </div>

@@ -48,7 +48,40 @@ try {
   await page.getByPlaceholder('Enter administrator password').fill('NSBS_2026');
   await page.getByRole('button', { name: 'Authenticate & Enter Dashboard' }).click();
   await page.getByText('Admin Session Active').waitFor();
-  await page.getByText('Certificate Issuer', { exact: true }).first().click();
+
+  await page.getByRole('button', { name: 'Platform Settings' }).click();
+  await page.getByLabel('Current academic session').fill('2027/2028 Academic Session');
+  await page.getByText('2027/2028 Academic Session', { exact: true }).last().waitFor();
+  const savedSettings = await page.evaluate(() => JSON.parse(localStorage.getItem('nsbs_settings') || '{}'));
+  assert.equal(savedSettings.session, '2027/2028 Academic Session', 'admin should be able to change the active academic session');
+
+  await page.getByRole('button', { name: /Past Executives & Archives/ }).click();
+  await page.getByText('Past Executives & Administration Archives').waitFor();
+  await page.getByRole('button', { name: 'Edit archive' }).first().click();
+  await page.getByLabel('Academic session').fill('2025/2026 Amended');
+  await page.getByLabel('President’s name').fill('Aisha Bello');
+  await page.getByLabel(/Key achievements/).fill('Updated archival achievement\nRestored leadership archive');
+  await page.getByRole('button', { name: 'Add executive' }).click();
+  await page.getByLabel('Executive 1 full name').fill('Chika Okafor');
+  await page.getByLabel('Executive 1 position').fill('General Secretary');
+  await page.getByLabel('Executive 1 biography').fill('Maintained the historical council record.');
+  await page.getByRole('button', { name: 'Save administration' }).click();
+  const savedArchives = await page.evaluate(() => JSON.parse(localStorage.getItem('nsbs_past_admins') || '[]'));
+  const savedArchive = savedArchives.find(item => item.session === '2025/2026 Amended');
+  assert.ok(savedArchive, 'admin should be able to edit and rename a past administration');
+  assert.equal(savedArchive.president, 'Aisha Bello');
+  assert.equal(savedArchive.executives[0].name, 'Chika Okafor', 'admin should be able to add archived executive records');
+  await page.getByRole('button', { name: 'Preview public archive' }).click();
+  await page.getByRole('button', { name: 'Past Administrations', exact: true }).waitFor();
+  await page.getByRole('heading', { name: /The 2027\/2028 Executive Council/ }).waitFor();
+  await page.getByText('2025/2026 Amended Academic Session').waitFor();
+  await page.getByText('Aisha Bello', { exact: true }).waitFor();
+  await page.getByText('View archived executive team (1)').click();
+  await page.getByText('Chika Okafor', { exact: true }).waitFor();
+
+  await page.evaluate(() => sessionStorage.setItem('nsbs_admin_section', 'certificates'));
+  await page.getByRole('button', { name: 'Admin Session Active' }).click();
+  await page.getByRole('button', { name: 'Certificate Issuer' }).click();
   await page.getByText('Certificate studio & issuance').waitFor();
 
   const registeredStudents = await page.evaluate(() => JSON.parse(localStorage.getItem('nsbs_registered_students') || '[]'));
@@ -98,11 +131,12 @@ try {
   const verificationUrl = await page.evaluate(() => JSON.parse(localStorage.getItem('nsbs_certificates') || '[]')[0]?.verificationUrl);
   assert.ok(verificationUrl, 'an issued certificate should have a verification URL');
   await page.goto(verificationUrl, { waitUntil: 'domcontentloaded' });
-  await page.getByText('Certificate found in the NSBS registry').waitFor();
+  await page.getByText('Certificate record found on this device').waitFor();
   await page.locator('.certificate-artwork-programme').getByText('Clinical Diagnostics and Biomarker Workshop').waitFor();
 
   assert.deepEqual(pageErrors, [], `browser console errors: ${pageErrors.join('; ')}`);
   console.log('PASS: student photo upload/removal, unlimited custom domain interests, future aspirations, and local persistence');
+  console.log('PASS: admin session editing and public past-administration/executive archive editing');
   console.log('PASS: admin student selection, logo/signature, certificate issue/edit, student access, and verification URL');
   console.log('PASS: landscape A4 certificate PDF with embedded branding, recipient, and achievement');
   console.log(`PDF verified: ${pdfBytes.length} bytes, ${pdfInfo.match(/Page size:.*$/m)?.[0]} (${download.suggestedFilename()})`);

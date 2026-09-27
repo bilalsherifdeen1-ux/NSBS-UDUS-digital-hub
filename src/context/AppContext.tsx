@@ -110,7 +110,9 @@ interface AppContextType {
   updateResearchProjectStatus: (id: string, status: ResearchProject['status']) => void;
   
   pastAdministrations: AdministrationArchive[];
-  addPastAdministration: (admin: AdministrationArchive) => void;
+  addPastAdministration: (admin: Omit<AdministrationArchive, 'id'> & { id?: string }) => void;
+  updatePastAdministration: (id: string, updated: Partial<AdministrationArchive>) => void;
+  deletePastAdministration: (id: string) => void;
   
   gallery: GalleryItem[];
   addGalleryItem: (item: Omit<GalleryItem, 'id'>) => void;
@@ -354,7 +356,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [pastAdministrations, setPastAdministrations] = useState<AdministrationArchive[]>(() => {
     const saved = localStorage.getItem('nsbs_past_admins');
-    return saved ? JSON.parse(saved) : initialPastAdministrations;
+    const archives: AdministrationArchive[] = saved ? JSON.parse(saved) : initialPastAdministrations;
+    return archives.map((archive, index) => ({
+      ...archive,
+      id: archive.id || `archive-${index + 1}`,
+      executives: archive.executives || []
+    }));
   });
 
   const [gallery, setGallery] = useState<GalleryItem[]>(() => {
@@ -1063,10 +1070,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Research project status updated to ${status}.`);
   };
 
-  const addPastAdministration = (admin: AdministrationArchive) => {
-    setPastAdministrations(prev => [admin, ...prev]);
-    logAdminAction('ARCHIVE_ADMINISTRATION', admin.session, `Archived tenure of ${admin.president}.`);
-    showToast(`Administration ${admin.session} archived.`);
+  const addPastAdministration = (admin: Omit<AdministrationArchive, 'id'> & { id?: string }) => {
+    if (pastAdministrations.some(existing => existing.session.trim().toLowerCase() === admin.session.trim().toLowerCase())) {
+      showToast('An archive already exists for this academic session.', 'warning');
+      return;
+    }
+    const newArchive: AdministrationArchive = { ...admin, id: admin.id || `archive-${Date.now()}`, executives: admin.executives || [] };
+    setPastAdministrations(prev => [newArchive, ...prev]);
+    logAdminAction('ARCHIVE_ADMINISTRATION', newArchive.session, `Archived tenure of ${newArchive.president}.`);
+    showToast(`Administration ${newArchive.session} archived.`);
+  };
+
+  const updatePastAdministration = (id: string, updated: Partial<AdministrationArchive>) => {
+    const existing = pastAdministrations.find(archive => archive.id === id || archive.session === id);
+    if (!existing) {
+      showToast('The selected administration archive could not be found.', 'warning');
+      return;
+    }
+    const nextSession = updated.session?.trim() || existing.session;
+    if (pastAdministrations.some(archive => archive.id !== existing.id && archive.session.trim().toLowerCase() === nextSession.toLowerCase())) {
+      showToast('An archive already exists for this academic session.', 'warning');
+      return;
+    }
+    setPastAdministrations(prev => prev.map(archive => archive.id === existing.id ? { ...archive, ...updated, id: existing.id, session: nextSession } : archive));
+    logAdminAction('UPDATE_PAST_ADMINISTRATION', existing.session, `Updated archived executive administration ${nextSession}.`);
+    showToast(`Administration ${nextSession} updated.`);
+  };
+
+  const deletePastAdministration = (id: string) => {
+    const existing = pastAdministrations.find(archive => archive.id === id || archive.session === id);
+    if (!existing) return;
+    setPastAdministrations(prev => prev.filter(archive => archive.id !== existing.id));
+    logAdminAction('DELETE_PAST_ADMINISTRATION', existing.session, `Removed past administration archive for ${existing.session}.`);
+    showToast(`Administration ${existing.session} removed.`);
   };
 
   const addGalleryItem = (item: Omit<GalleryItem, 'id'>) => {
@@ -1185,6 +1221,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateResearchProjectStatus,
         pastAdministrations,
         addPastAdministration,
+        updatePastAdministration,
+        deletePastAdministration,
         gallery,
         addGalleryItem,
         deleteGalleryItem,

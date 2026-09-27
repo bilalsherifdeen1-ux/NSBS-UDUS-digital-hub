@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Executive, AdministrationArchive } from '../../types';
 import { 
@@ -18,11 +18,21 @@ import {
 } from 'lucide-react';
 
 export const ExecutivesView: React.FC = () => {
-  const { executives, pastAdministrations, userRole, isAdminAuthenticated, setActivePage } = useApp();
+  const { executives, pastAdministrations, siteSettings, userRole, isAdminAuthenticated, setActivePage } = useApp();
 
   const [activeTab, setActiveTab] = useState<'current' | 'past'>('current');
   const [selectedExecutive, setSelectedExecutive] = useState<Executive | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'swipe'>('grid');
+
+  useEffect(() => {
+    const openPastAdministrations = () => setActiveTab('past');
+    window.addEventListener('nsbs:open-past-executives', openPastAdministrations);
+    if (sessionStorage.getItem('nsbs_executives_tab') === 'past') {
+      setActiveTab('past');
+      sessionStorage.removeItem('nsbs_executives_tab');
+    }
+    return () => window.removeEventListener('nsbs:open-past-executives', openPastAdministrations);
+  }, []);
 
   return (
     <div className="py-10 bg-slate-50 min-h-screen">
@@ -37,7 +47,7 @@ export const ExecutivesView: React.FC = () => {
             </div>
             
             <h1 className="font-display-academic text-3xl sm:text-4xl font-bold text-slate-900">
-              The 2026/2027 Executive Council (19 Offices)
+              The {siteSettings.session.replace(/\s*Academic Session$/i, '')} Executive Council ({executives.length} Offices)
             </h1>
             
             <p className="text-slate-600 text-sm leading-relaxed">
@@ -73,7 +83,7 @@ export const ExecutivesView: React.FC = () => {
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Current Administration (19 Executives)</span>
+              <span>Current Administration ({executives.length} Executives)</span>
             </button>
 
             <button
@@ -118,7 +128,7 @@ export const ExecutivesView: React.FC = () => {
             
             {/* Swipe hint on touch devices */}
             <div className="text-xs text-slate-500 font-mono flex items-center justify-between">
-              <span>Showing all 19 Constitutional Executive Positions</span>
+              <span>Showing all {executives.length} Constitutional Executive Positions</span>
               <span className="text-blue-900 font-semibold md:hidden">← Swipe horizontally to explore →</span>
             </div>
 
@@ -278,7 +288,7 @@ export const ExecutivesView: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {pastAdministrations.map((admin) => (
-                <div key={admin.session} className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <div key={admin.id || admin.session} className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <span className="font-mono text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-1 rounded">
                       {admin.session} Academic Session
@@ -315,8 +325,23 @@ export const ExecutivesView: React.FC = () => {
 
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                     <span>{admin.documentsCount} Archived Constitutional Documents</span>
-                    <span className="font-mono text-emerald-700 font-semibold">✓ Verified Archive</span>
+                    <span className="font-mono text-slate-500 font-semibold">NSBS historical archive</span>
                   </div>
+                  {!!admin.executives?.length && (
+                    <details className="border-t border-slate-100 pt-3">
+                      <summary className="cursor-pointer text-xs font-semibold text-blue-900">View archived executive team ({admin.executives.length})</summary>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {admin.executives.map(executive => (
+                          <div key={executive.id} className="rounded-lg border border-slate-200 p-3">
+                            <div className="text-xs font-bold text-slate-900">{executive.name || 'Name not provided'}</div>
+                            <div className="mt-0.5 text-[11px] text-blue-900">{executive.position}</div>
+                            <div className="text-[11px] text-slate-500">{executive.portfolio}</div>
+                            {executive.biography && <p className="mt-2 text-[11px] leading-relaxed text-slate-600">{executive.biography}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
               ))}
             </div>

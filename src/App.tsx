@@ -13,24 +13,24 @@ import { HomeAILabPreview } from './components/home/HomeAILabPreview';
 import { HomeProgrammes } from './components/home/HomeProgrammes';
 import { HomePresidentMessage } from './components/home/HomePresidentMessage';
 
-// Dedicated views
-import { AboutView } from './components/about/AboutView';
-import { AcademicsView } from './components/academics/AcademicsView';
-import { LibraryView } from './components/library/LibraryView';
-import { AILabView } from './components/ailab/AILabView';
-import { EventsView } from './components/events/EventsView';
-import { OpportunitiesView } from './components/opportunities/OpportunitiesView';
-import { ResearchView } from './components/research/ResearchView';
-import { ProgrammesView } from './components/programmes/ProgrammesView';
-import { ExecutivesView } from './components/executives/ExecutivesView';
-import { NewsView } from './components/news/NewsView';
-import { GalleryView } from './components/gallery/GalleryView';
-import { ContactView } from './components/contact/ContactView';
-import { StudentDashboard } from './components/student/StudentDashboard';
-import { AdminDashboard } from './components/admin/AdminDashboard';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
 import { CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 import { CertificateArtwork } from './components/common/CertificateArtwork';
+
+const StudentDashboard = React.lazy(() => import('./components/student/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
+const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const AboutView = React.lazy(() => import('./components/about/AboutView').then(module => ({ default: module.AboutView })));
+const AcademicsView = React.lazy(() => import('./components/academics/AcademicsView').then(module => ({ default: module.AcademicsView })));
+const LibraryView = React.lazy(() => import('./components/library/LibraryView').then(module => ({ default: module.LibraryView })));
+const AILabView = React.lazy(() => import('./components/ailab/AILabView').then(module => ({ default: module.AILabView })));
+const EventsView = React.lazy(() => import('./components/events/EventsView').then(module => ({ default: module.EventsView })));
+const OpportunitiesView = React.lazy(() => import('./components/opportunities/OpportunitiesView').then(module => ({ default: module.OpportunitiesView })));
+const ResearchView = React.lazy(() => import('./components/research/ResearchView').then(module => ({ default: module.ResearchView })));
+const ProgrammesView = React.lazy(() => import('./components/programmes/ProgrammesView').then(module => ({ default: module.ProgrammesView })));
+const ExecutivesView = React.lazy(() => import('./components/executives/ExecutivesView').then(module => ({ default: module.ExecutivesView })));
+const NewsView = React.lazy(() => import('./components/news/NewsView').then(module => ({ default: module.NewsView })));
+const GalleryView = React.lazy(() => import('./components/gallery/GalleryView').then(module => ({ default: module.GalleryView })));
+const ContactView = React.lazy(() => import('./components/contact/ContactView').then(module => ({ default: module.ContactView })));
 
 const MainContent: React.FC = () => {
   const { activePage, toast, certificates, setActivePage } = useApp();
@@ -44,6 +44,7 @@ const MainContent: React.FC = () => {
       <Navbar />
       <GlobalSearchModal />
 
+      <React.Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center text-sm font-semibold text-slate-600">Loading portal…</div>}>
       <main className="flex-1">
         {verificationCode ? (
           <section className="min-h-[75vh] bg-slate-50 px-4 py-12 sm:px-8">
@@ -52,11 +53,11 @@ const MainContent: React.FC = () => {
                 <div className="flex items-center gap-3">
                   {verifiedCertificate ? <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-700" /> : <AlertTriangle className="h-8 w-8 shrink-0 text-amber-700" />}
                   <div>
-                    <h1 className="font-display-academic text-xl font-bold text-slate-900">{verifiedCertificate ? 'Certificate found in the NSBS registry' : 'Certificate record not found'}</h1>
+                    <h1 className="font-display-academic text-xl font-bold text-slate-900">{verifiedCertificate ? 'Certificate record found on this device' : 'No certificate record found on this device'}</h1>
                     <p className="mt-1 break-all font-mono text-xs text-slate-600">Verification code: {verificationCode}</p>
                   </div>
                 </div>
-                {!verifiedCertificate && <p className="mt-4 text-sm text-slate-700">Check that you have the complete code and try again. This browser's stored NSBS registry does not contain this certificate.</p>}
+                <p className="mt-4 text-sm text-slate-700">This page only matches certificate records saved in the current browser. It is not a central NSBS registry and cannot independently authenticate a certificate.</p>
               </div>
               {verifiedCertificate && <CertificateArtwork certificate={verifiedCertificate} />}
               <button onClick={() => { window.history.replaceState({}, '', window.location.pathname); setActivePage('home'); }} className="rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800">Return to NSBS homepage</button>
@@ -89,6 +90,7 @@ const MainContent: React.FC = () => {
         {!verificationCode && activePage === 'student-portal' && <StudentDashboard />}
         {!verificationCode && activePage === 'admin-dashboard' && <AdminDashboard />}
       </main>
+      </React.Suspense>
 
       <Footer />
       <MobileBottomNav />

@@ -41,6 +41,7 @@ import { CertificateArtwork } from '../common/CertificateArtwork';
 export const StudentDashboard: React.FC = () => {
   const { 
     currentUser, 
+    siteSettings,
     setCurrentUser, 
     userRole, 
     setUserRole, 
@@ -1467,7 +1468,7 @@ export const StudentDashboard: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-[9px] font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 px-2 py-0.5 rounded-full font-bold">
-                        ACTIVE · 2026/2027
+                        ACTIVE · {siteSettings.session.replace(/\s*Academic Session$/i, '')}
                       </span>
                     </div>
 

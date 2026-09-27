@@ -146,6 +146,7 @@ export interface Executive {
 }
 
 export interface AdministrationArchive {
+  id?: string;
   session: string;
   theme: string;
   president: string;
@@ -153,6 +154,7 @@ export interface AdministrationArchive {
   achievements: string[];
   summary: string;
   documentsCount: number;
+  executives?: Executive[];
 }
 
 export interface Programme {

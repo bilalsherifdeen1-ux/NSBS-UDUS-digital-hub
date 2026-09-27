@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { ArrowRight, Compass, CheckCircle2, Target } from 'lucide-react';
 
 export const HomeProgrammes: React.FC = () => {
-  const { programmes, setActivePage } = useApp();
+  const { programmes, siteSettings, setActivePage } = useApp();
 
   const featuredProgrammes = programmes.slice(0, 3);
 
@@ -15,7 +15,7 @@ export const HomeProgrammes: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <div className="text-xs font-mono font-semibold uppercase tracking-wider text-blue-900 mb-1">
-              2026/2027 Action Plan
+              {siteSettings.session.replace(/\s*Academic Session$/i, '')} Action Plan
             </div>
             <h2 className="font-display-academic text-2xl sm:text-3xl font-bold text-slate-900">
               Flagship NSBS Strategic Programmes

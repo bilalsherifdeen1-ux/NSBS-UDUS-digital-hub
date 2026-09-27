@@ -36,7 +36,7 @@ export const HomePresidentMessage: React.FC = () => {
                   )}
                 </div>
                 <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#0c2340] text-amber-300 text-[10px] font-mono px-3 py-1 rounded shadow uppercase font-bold tracking-wider whitespace-nowrap">
-                  President 2026/2027
+                  President {siteSettings.session.replace(/\s*Academic Session$/i, '')}
                 </div>
               </div>
 
@@ -75,7 +75,7 @@ export const HomePresidentMessage: React.FC = () => {
                   onClick={() => setActivePage('executives')}
                   className="px-4 py-2 rounded bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5"
                 >
-                  <span>Meet the Full 2026/2027 Executive Team</span>
+                  <span>Meet the Full {siteSettings.session.replace(/\s*Academic Session$/i, '')} Executive Team</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
                 

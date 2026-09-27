@@ -15,6 +15,12 @@ export const Footer: React.FC = () => {
     navigateTo('admin-dashboard');
   };
 
+  const openPastAdministrations = () => {
+    sessionStorage.setItem('nsbs_executives_tab', 'past');
+    navigateTo('executives');
+    window.dispatchEvent(new Event('nsbs:open-past-executives'));
+  };
+
   return (
     <footer className="bg-[#081528] text-slate-300 border-t border-slate-800 text-sm">
       {/* Upper Footer: Core Navigation */}
@@ -32,7 +38,7 @@ export const Footer: React.FC = () => {
                   NIGERIAN SOCIETY OF BIOCHEMISTRY STUDENTS
                 </span>
                 <span className="text-xs text-blue-300 font-medium">
-                  Usmanu Danfodiyo University, Sokoto · 2026/2027
+                  Usmanu Danfodiyo University, Sokoto · {siteSettings.session.replace(/\s*Academic Session$/i, '')}
                 </span>
               </div>
             </div>
@@ -244,11 +250,11 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <button onClick={() => navigateTo('executives')} className="text-slate-400 hover:text-white transition-colors">
-                  Executive Council 2026/2027
+                  Executive Council {siteSettings.session.replace(/\s*Academic Session$/i, '')}
                 </button>
               </li>
               <li>
-                <button onClick={() => navigateTo('executives')} className="text-slate-400 hover:text-white transition-colors">
+                <button onClick={openPastAdministrations} className="text-slate-400 hover:text-white transition-colors">
                   Past Administrations Archive
                 </button>
               </li>
@@ -292,7 +298,7 @@ export const Footer: React.FC = () => {
             <span>·</span>
             <span>Faculty of Chemical & Life Sciences</span>
             <span>·</span>
-            <span className="font-mono text-emerald-400">2026/2027 Session</span>
+            <span className="font-mono text-emerald-400">{siteSettings.session}</span>
           </div>
         </div>
       </div>
