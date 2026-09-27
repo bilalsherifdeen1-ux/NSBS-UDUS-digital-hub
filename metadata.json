@@ -1,0 +1,6 @@
+{
+  "name": "NSBS UDUS - Nigerian Society of Biochemistry Students",
+  "description": "The official academic and student-community platform for the Nigerian Society of Biochemistry Students, Usmanu Danfodiyo University, Sokoto (2026/2027 Administration).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
