@@ -27,6 +27,7 @@ export const Navbar: React.FC = () => {
   const { 
     activePage, 
     setActivePage, 
+    siteSettings,
     userRole, 
     currentUser, 
     isAdminAuthenticated,
@@ -168,7 +169,7 @@ export const Navbar: React.FC = () => {
             </span>
             <span className="text-slate-400 hidden md:inline" aria-hidden="true">·</span>
             <span className="text-emerald-400 font-mono text-[11px] hidden md:inline">
-              Session: 2026/2027
+              Session: {siteSettings.session.replace(/\s*Academic Session$/i, '')}
             </span>
           </div>
 
@@ -325,7 +326,7 @@ export const Navbar: React.FC = () => {
                     <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">19</span>
                   </button>
                   <button onClick={() => navigateTo('programmes')} className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm font-medium text-slate-700">
-                    2026/2027 Programmes
+                    {siteSettings.session.replace(/\s*Academic Session$/i, '')} Programmes
                   </button>
                   <button onClick={() => navigateTo('research')} className="w-full text-left px-4 py-2 hover:bg-slate-50 text-sm font-medium text-slate-700">
                     Research & Publications
@@ -597,7 +598,7 @@ export const Navbar: React.FC = () => {
             <span className="text-xs font-mono font-bold text-blue-900 uppercase">
               NSBS Navigation Menu
             </span>
-            <span className="text-[11px] text-slate-500 font-mono">Session 2026/2027</span>
+            <span className="text-[11px] text-slate-500 font-mono">Session {siteSettings.session.replace(/\s*Academic Session$/i, '')}</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-1 pb-2">

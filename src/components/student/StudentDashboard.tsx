@@ -30,12 +30,18 @@ import {
   EyeOff,
   AlertCircle,
   Check,
-  CheckCheck
+  CheckCheck,
+  ImagePlus,
+  Trash2
 } from 'lucide-react';
+import { fileToOptimizedDataUrl } from '../../utils/images';
+import { downloadCertificatePdf } from '../../utils/certificatePdf';
+import { CertificateArtwork } from '../common/CertificateArtwork';
 
 export const StudentDashboard: React.FC = () => {
   const { 
     currentUser, 
+    siteSettings,
     setCurrentUser, 
     userRole, 
     setUserRole, 
@@ -99,6 +105,10 @@ export const StudentDashboard: React.FC = () => {
   const [editProgramme, setEditProgramme] = useState('B.Sc. Biochemistry');
   const [editDepartment, setEditDepartment] = useState('Biochemistry');
   const [editInterests, setEditInterests] = useState<string[]>([]);
+  const [editFutureAspirations, setEditFutureAspirations] = useState<string[]>([]);
+  const [editProfilePhoto, setEditProfilePhoto] = useState<string | undefined>();
+  const [customInterestInput, setCustomInterestInput] = useState('');
+  const [customAspirationInput, setCustomAspirationInput] = useState('');
   const [newPortalPass, setNewPortalPass] = useState('');
   const [confirmPortalPass, setConfirmPortalPass] = useState('');
   const [showNewPortalPass, setShowNewPortalPass] = useState(false);
@@ -116,6 +126,8 @@ export const StudentDashboard: React.FC = () => {
       setEditProgramme(currentUser.programme || 'B.Sc. Biochemistry');
       setEditDepartment(currentUser.department || 'Biochemistry');
       setEditInterests(currentUser.interests || ['Clinical Biochemistry', 'Enzymology']);
+      setEditFutureAspirations(currentUser.futureAspirations || []);
+      setEditProfilePhoto(currentUser.profilePhoto);
     }
   }, [currentUser]);
 
@@ -233,7 +245,9 @@ export const StudentDashboard: React.FC = () => {
       stateOfOrigin: editState.trim(),
       programme: editProgramme.trim(),
       department: editDepartment.trim(),
-      interests: editInterests
+      interests: editInterests,
+      futureAspirations: editFutureAspirations,
+      profilePhoto: editProfilePhoto
     };
 
     if (newPortalPass && newPortalPass.trim().length >= 4) {
@@ -246,6 +260,27 @@ export const StudentDashboard: React.FC = () => {
     setConfirmPortalPass('');
   };
 
+  const handleProfilePhotoChange = async (file?: File) => {
+    if (!file) return;
+    try {
+      const photo = await fileToOptimizedDataUrl(file, { maxWidth: 720, maxHeight: 720, quality: 0.8, maxBytes: 250_000 });
+      setEditProfilePhoto(photo);
+      showToast('Profile photo is ready. Save your profile to keep the change.', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to process the selected photo.', 'warning');
+    }
+  };
+
+  const addListEntries = (value: string, current: string[], setter: (entries: string[]) => void) => {
+    const additions = value.split(/[;,\n]/).map(item => item.trim()).filter(Boolean);
+    if (!additions.length) return;
+    const merged = [...current];
+    additions.forEach(item => {
+      if (!merged.some(existing => existing.toLocaleLowerCase() === item.toLocaleLowerCase())) merged.push(item);
+    });
+    setter(merged);
+  };
+
   const handleLogout = () => {
     setCurrentUser(null);
     setUserRole('guest');
@@ -255,6 +290,9 @@ export const StudentDashboard: React.FC = () => {
 
   // Saved resources
   const savedResources = resources.filter(r => bookmarkedResourceIds.includes(r.id));
+  const studentCertificates = certificates.filter(cert =>
+    cert.studentId === currentUser?.id || cert.studentName?.trim().toLocaleLowerCase() === currentUser?.fullName.trim().toLocaleLowerCase()
+  );
   
   // Registered events
   const registeredEvents = events.filter(e => registeredEventIds.includes(e.id));
@@ -670,8 +708,10 @@ export const StudentDashboard: React.FC = () => {
         {/* Student Welcome Banner */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-blue-900 text-white flex items-center justify-center font-display-academic text-xl font-bold shadow-md">
-              {currentUser.fullName.split(' ').map(n => n[0]).join('')}
+            <div className="w-16 h-16 rounded-full bg-blue-900 text-white flex items-center justify-center font-display-academic text-xl font-bold shadow-md overflow-hidden shrink-0">
+              {currentUser.profilePhoto ? (
+                <img src={currentUser.profilePhoto} alt={`${currentUser.fullName} profile`} className="w-full h-full object-cover" />
+              ) : currentUser.fullName.split(' ').map(n => n[0]).join('')}
             </div>
             
             <div>
@@ -812,7 +852,7 @@ export const StudentDashboard: React.FC = () => {
             }`}
           >
             <Award className="w-3.5 h-3.5" />
-            <span>Verified Certificates ({certificates.length})</span>
+            <span>My Certificates ({studentCertificates.length})</span>
           </button>
 
           <button
@@ -992,7 +1032,12 @@ export const StudentDashboard: React.FC = () => {
               Your Official Issued Certificates
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {certificates.map((cert) => (
+              {studentCertificates.length === 0 && (
+                <div className="md:col-span-2 rounded-lg border border-dashed border-slate-300 py-10 text-center text-sm text-slate-500">
+                  No certificates have been issued to your profile yet. Your administrator can issue them here when you complete a programme.
+                </div>
+              )}
+              {studentCertificates.map((cert) => (
                 <div key={cert.id} className="p-5 rounded-lg border-2 border-blue-900/20 bg-blue-50/30 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
@@ -1017,7 +1062,7 @@ export const StudentDashboard: React.FC = () => {
                       className="px-3 py-1.5 rounded bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold flex items-center gap-1.5"
                     >
                       <Printer className="w-3.5 h-3.5" />
-                      <span>View &amp; Print Certificate</span>
+                      <span>Preview &amp; Download PDF</span>
                     </button>
                   </div>
                 </div>
@@ -1229,19 +1274,29 @@ export const StudentDashboard: React.FC = () => {
                       </h4>
                     </div>
                     <p className="text-xs text-slate-500">
-                      Select your primary fields of interest to tailor customized lecture recommendations, tutorials, and scholarship alerts.
+                      Choose any number of fields and add your own specialist areas. There is no selection limit.
                     </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {editInterests.map(interest => (
+                        <button key={interest} type="button" onClick={() => setEditInterests(editInterests.filter(item => item !== interest))}
+                          className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-950 hover:bg-red-50 hover:border-red-200 hover:text-red-700">
+                          {interest}<span aria-hidden="true">×</span>
+                        </button>
+                      ))}
+                      {editInterests.length === 0 && <span className="text-xs text-slate-400">No interest selected yet.</span>}
+                    </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs text-slate-700">
                       {[
-                        'Clinical Biochemistry', 
-                        'Enzymology', 
-                        'Molecular Biology', 
-                        'Phytomedicine & Drug Discovery', 
-                        'AI in Healthcare & Bioinformatics', 
-                        'Biotechnology',
-                        'Nutritional Biochemistry',
-                        'Toxicology & Environmental Health'
+                        'Clinical Biochemistry', 'Medical Biochemistry', 'Molecular Biology', 'Molecular Diagnostics',
+                        'Enzymology', 'Protein Biochemistry', 'Structural Biology', 'Metabolism', 'Nutritional Biochemistry',
+                        'Food Biochemistry', 'Industrial Biochemistry', 'Plant Biochemistry', 'Phytochemistry',
+                        'Phytomedicine & Drug Discovery', 'Pharmacology', 'Toxicology', 'Environmental Biochemistry',
+                        'Analytical Biochemistry', 'Physical Biochemistry', 'Immunochemistry', 'Immunology', 'Genetics',
+                        'Epigenetics', 'Genomics', 'Proteomics', 'Lipidomics', 'Bioinformatics', 'Computational Biology',
+                        'Biotechnology', 'Microbiology', 'Neurochemistry', 'Hematology', 'Oncology', 'Virology',
+                        'Biochemical Engineering', 'AI in Healthcare', 'Public Health Biochemistry'
                       ].map((interest) => {
                         const isSelected = editInterests.includes(interest);
                         return (
@@ -1270,6 +1325,38 @@ export const StudentDashboard: React.FC = () => {
                           </button>
                         );
                       })}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input value={customInterestInput} onChange={event => setCustomInterestInput(event.target.value)}
+                        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addListEntries(customInterestInput, editInterests, setEditInterests); setCustomInterestInput(''); } }}
+                        placeholder="Add any other field or specialist research area" className="min-w-0 flex-1 p-2.5 rounded-lg border border-slate-300 text-xs" />
+                      <button type="button" onClick={() => { addListEntries(customInterestInput, editInterests, setEditInterests); setCustomInterestInput(''); }}
+                        className="px-4 py-2 rounded-lg bg-blue-900 text-white text-xs font-semibold">Add interest</button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
+                    <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                      <Sparkles className="w-4 h-4 text-emerald-700" />
+                      <h4 className="font-display-academic text-sm font-bold text-slate-900 uppercase tracking-wide">Future Aspirations</h4>
+                    </div>
+                    <p className="text-xs text-slate-500">Add any number of career, research, postgraduate, or professional goals. These remain private to your profile.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {editFutureAspirations.map(aspiration => (
+                        <button key={aspiration} type="button" onClick={() => setEditFutureAspirations(editFutureAspirations.filter(item => item !== aspiration))}
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-950 hover:bg-red-50 hover:border-red-200 hover:text-red-700">
+                          {aspiration}<span aria-hidden="true">×</span>
+                        </button>
+                      ))}
+                      {editFutureAspirations.length === 0 && <span className="text-xs text-slate-400">No future aspirations added yet.</span>}
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input value={customAspirationInput} onChange={event => setCustomAspirationInput(event.target.value)}
+                        onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addListEntries(customAspirationInput, editFutureAspirations, setEditFutureAspirations); setCustomAspirationInput(''); } }}
+                        placeholder="e.g. PhD in clinical enzymology, medical research, biotech founder" className="min-w-0 flex-1 p-2.5 rounded-lg border border-slate-300 text-xs" />
+                      <button type="button" onClick={() => { addListEntries(customAspirationInput, editFutureAspirations, setEditFutureAspirations); setCustomAspirationInput(''); }}
+                        className="px-4 py-2 rounded-lg bg-emerald-800 text-white text-xs font-semibold">Add aspiration</button>
                     </div>
                   </div>
 
@@ -1339,6 +1426,29 @@ export const StudentDashboard: React.FC = () => {
 
                 {/* Right One Column: Live Student Identity Card Preview */}
                 <div className="space-y-6">
+                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-blue-100 bg-slate-100 flex items-center justify-center text-blue-900 font-display-academic text-xl font-bold shrink-0">
+                        {editProfilePhoto ? <img src={editProfilePhoto} alt="Profile preview" className="w-full h-full object-cover" /> : (editFullName || 'Scholar').split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-sm text-slate-900">Profile picture</h4>
+                        <p className="text-[11px] text-slate-500 mt-1">JPG, PNG, or WebP. Images are resized to protect your profile storage.</p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-900 px-3 py-2 text-[11px] font-semibold text-white hover:bg-blue-800">
+                            <ImagePlus className="w-3.5 h-3.5" />
+                            {editProfilePhoto ? 'Change photo' : 'Upload photo'}
+                            <input type="file" accept="image/*" className="sr-only" onChange={event => { void handleProfilePhotoChange(event.target.files?.[0]); event.currentTarget.value = ''; }} />
+                          </label>
+                          {editProfilePhoto && (
+                            <button type="button" onClick={() => setEditProfilePhoto(undefined)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-[11px] font-semibold text-red-700 hover:bg-red-50">
+                              <Trash2 className="w-3.5 h-3.5" /> Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   <div className="bg-gradient-to-br from-[#0c2340] to-[#1d3557] rounded-2xl p-6 text-white shadow-xl relative overflow-hidden border border-blue-800 sticky top-24">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
                     
@@ -1358,14 +1468,14 @@ export const StudentDashboard: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-[9px] font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 px-2 py-0.5 rounded-full font-bold">
-                        ACTIVE · 2026/2027
+                        ACTIVE · {siteSettings.session.replace(/\s*Academic Session$/i, '')}
                       </span>
                     </div>
 
                     {/* Student Info */}
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="w-14 h-14 rounded-full bg-blue-950 border-2 border-amber-400/60 flex items-center justify-center text-amber-300 font-display-academic font-bold text-lg shadow-md shrink-0">
-                        {(editFullName || 'Scholar').split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      <div className="w-14 h-14 rounded-full bg-blue-950 border-2 border-amber-400/60 flex items-center justify-center text-amber-300 font-display-academic font-bold text-lg shadow-md shrink-0 overflow-hidden">
+                        {editProfilePhoto ? <img src={editProfilePhoto} alt="Student identity preview" className="w-full h-full object-cover" /> : (editFullName || 'Scholar').split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-display-academic text-base font-bold text-white truncate">
@@ -1419,6 +1529,10 @@ export const StudentDashboard: React.FC = () => {
                       </div>
                     </div>
 
+                    <div className="mt-3 text-[10px] text-blue-200">
+                      Future aspirations: <span className="font-bold text-white">{editFutureAspirations.length}</span>
+                    </div>
+
                   </div>
                 </div>
 
@@ -1430,7 +1544,7 @@ export const StudentDashboard: React.FC = () => {
         {/* Verified Certificate Modal View */}
         {viewingCertificate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-xl max-w-2xl w-full p-8 border-4 border-[#0c2340] shadow-2xl relative">
+            <div className="bg-white rounded-xl max-w-5xl w-full p-4 sm:p-7 border-4 border-[#0c2340] shadow-2xl relative max-h-[95vh] overflow-y-auto">
               <button
                 onClick={() => setViewingCertificate(null)}
                 className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-mono"
@@ -1438,61 +1552,18 @@ export const StudentDashboard: React.FC = () => {
                 ✕
               </button>
 
-              {/* Certificate Inner Canvas Layout */}
-              <div className="text-center space-y-4 border-2 border-amber-600/40 p-6 rounded-lg bg-amber-50/10">
-                <div className="font-display-academic font-bold text-xs uppercase tracking-widest text-[#0c2340]">
-                  USMANU DANFODIYO UNIVERSITY, SOKOTO
-                </div>
-                <div className="text-[11px] font-mono text-slate-500">
-                  NIGERIAN SOCIETY OF BIOCHEMISTRY STUDENTS (NSBS)
-                </div>
-
-                <div className="font-display-academic text-2xl font-bold text-slate-900 pt-2">
-                  Certificate of Academic Achievement
-                </div>
-
-                <div className="text-xs text-slate-600 italic">
-                  This official academic credential certifies that
-                </div>
-
-                <div className="font-serif-academic text-2xl font-bold text-blue-950 border-b-2 border-slate-300 pb-2 inline-block px-8">
-                  {viewingCertificate.studentName}
-                </div>
-
-                <div className="text-xs text-slate-700 max-w-md mx-auto leading-relaxed">
-                  has satisfactorily completed all academic modules, practical evaluations, and seminar requirements for the
-                </div>
-
-                <div className="font-display-academic text-base font-bold text-slate-900">
-                  {viewingCertificate.programmeTitle}
-                </div>
-
-                <div className="text-xs text-slate-500">
-                  Conferred on {viewingCertificate.issueDate} at Usmanu Danfodiyo University, Main Campus, Sokoto.
-                </div>
-
-                <div className="pt-6 border-t border-slate-200 grid grid-cols-2 gap-6 text-xs text-slate-600">
-                  <div>
-                    <div className="font-serif-academic italic font-bold text-slate-900">{viewingCertificate.issuerName}</div>
-                    <div className="text-[10px] text-slate-500">{viewingCertificate.issuerRole}</div>
-                  </div>
-                  <div>
-                    <div className="font-mono text-blue-900 font-bold">{viewingCertificate.certificateCode}</div>
-                    <div className="text-[10px] text-slate-400">Official Verification ID</div>
-                  </div>
-                </div>
-              </div>
+              <CertificateArtwork certificate={viewingCertificate} />
 
               <div className="pt-4 flex items-center justify-between">
                 <span className="text-[10px] font-mono text-slate-400">
                   Verify at: {viewingCertificate.verificationUrl}
                 </span>
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => downloadCertificatePdf(viewingCertificate)}
                   className="px-4 py-2 rounded bg-blue-900 text-white text-xs font-semibold flex items-center gap-1.5"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print Certificate</span>
+                  <span>Download official PDF</span>
                 </button>
               </div>
             </div>

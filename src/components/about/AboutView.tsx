@@ -98,7 +98,7 @@ export const AboutView: React.FC = () => {
               Constitutional Objectives & Strategic Priorities
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Guiding principles established in the NSBS UDUS Chapter Constitution (2026/2027 Session).
+              <span>Guiding principles established in the NSBS UDUS Chapter Constitution ({siteSettings.session}).</span>
             </p>
           </div>
 

@@ -146,6 +146,7 @@ export interface Executive {
 }
 
 export interface AdministrationArchive {
+  id?: string;
   session: string;
   theme: string;
   president: string;
@@ -153,6 +154,7 @@ export interface AdministrationArchive {
   achievements: string[];
   summary: string;
   documentsCount: number;
+  executives?: Executive[];
 }
 
 export interface Programme {
@@ -197,6 +199,7 @@ export interface StudentUser {
   phone: string;
   interests: string[];
   profilePhoto?: string;
+  futureAspirations?: string[];
   joinedDate: string;
   onboardingCompleted: boolean;
   stateOfOrigin?: string;
@@ -214,6 +217,12 @@ export interface Certificate {
   issuerName: string;
   issuerRole: string;
   verificationUrl: string;
+  certificateTitle: string;
+  completionStatement: string;
+  organizationName: string;
+  universityName: string;
+  logoDataUrl?: string;
+  signatureDataUrl?: string;
 }
 
 export interface FeedbackSubmission {

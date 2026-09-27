@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const ProgrammesView: React.FC = () => {
-  const { programmes, setActivePage } = useApp();
+  const { programmes, siteSettings, setActivePage } = useApp();
 
   const [selectedSemester, setSelectedSemester] = useState<'all' | 'First Semester' | 'Second Semester'>('all');
   const [activeModalProg, setActiveModalProg] = useState<Programme | null>(null);
@@ -32,7 +32,7 @@ export const ProgrammesView: React.FC = () => {
           <div className="max-w-3xl space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono font-semibold text-blue-900 uppercase tracking-wider">
               <Compass className="w-4 h-4 text-blue-900" />
-              <span>NSBS UDUS 2026/2027 ADMINISTRATION</span>
+              <span>NSBS UDUS {siteSettings.session.toUpperCase()}</span>
             </div>
             
             <h1 className="font-display-academic text-3xl sm:text-4xl font-bold text-slate-900">
@@ -40,7 +40,7 @@ export const ProgrammesView: React.FC = () => {
             </h1>
             
             <p className="text-slate-600 text-sm leading-relaxed">
-              Explore the 16 strategic flagship initiatives powering academic excellence, community outreach, and biotechnology innovation throughout the 2026/2027 academic session.
+              Explore the {programmes.length} strategic initiatives powering academic excellence, community outreach, and biotechnology innovation throughout the {siteSettings.session}.
             </p>
           </div>
         </div>
